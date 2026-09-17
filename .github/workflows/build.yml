@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          - os: macos-15-intel
+            name: mac-intel
+          - os: macos-latest
+            name: mac-arm
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyinstaller
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: pyinstaller --onefile --windowed --name "WardogsRange" wardogs_range.py
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --windowed --name "Wardogs Range" wardogs_range.py
+          hdiutil create -volname "Wardogs Range" -srcfolder "dist/Wardogs Range.app" -ov -format UDZO "dist/WardogsRange-${{ matrix.name }}.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WardogsRange-${{ matrix.name }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
